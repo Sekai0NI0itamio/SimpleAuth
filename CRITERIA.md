@@ -11,7 +11,7 @@
 
 ## v1.1.0 additions
 
-- [ ] Same-IP rejoin within the session window (default 24h, configurable, 0 disables) auto-authenticates, no /login needed
+- [x] Same-IP rejoin within the session window (default 24h, configurable, 0 disables) auto-authenticates, no /login needed
 - [ ] Sessions persist across server restarts (stored with the account, expiry honored)
 - [ ] Wrong IP or expired session falls back to the normal /login flow
 - [ ] Unauthenticated players are moved to the limbo spot on join; inventory, ender chest, health, food, XP, and real location snapshotted to disk first
