@@ -2,6 +2,7 @@ package com.simpleauth.simpleauth.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.simpleauth.simpleauth.AuthEventHandler;
 import com.simpleauth.simpleauth.SimpleAuth;
 import com.simpleauth.simpleauth.SimpleAuthConfig;
 import com.simpleauth.simpleauth.auth.AuthManager;
@@ -70,7 +71,7 @@ public final class AuthCommands {
                     source.sendFailure(Component.literal("Registered, but saving failed. Tell an admin!").withStyle(ChatFormatting.RED));
                     return 0;
                 }
-                source.sendSuccess(Component.literal("Registered! You are logged in.").withStyle(ChatFormatting.GREEN), false);
+                source.sendSuccess(() -> Component.literal("Registered! You are logged in.").withStyle(ChatFormatting.GREEN), false);
                 return 1;
             }
             default -> source.sendFailure(Component.literal("Registration failed.").withStyle(ChatFormatting.RED));
@@ -87,7 +88,7 @@ public final class AuthCommands {
         AuthManager.Result result = manager.login(
                 player.getUUID(), password, SimpleAuthConfig.MAX_LOGIN_ATTEMPTS.get());
         switch (result) {
-            case ALREADY_LOGGED_IN -> source.sendSuccess(Component.literal("You are already logged in.").withStyle(ChatFormatting.YELLOW), false);
+            case ALREADY_LOGGED_IN -> source.sendSuccess(() -> Component.literal("You are already logged in.").withStyle(ChatFormatting.YELLOW), false);
             case NO_ACCOUNT -> source.sendFailure(Component.literal("No account yet. Use /register <password> <password>.").withStyle(ChatFormatting.RED));
             case WRONG_PASSWORD -> source.sendFailure(Component.literal("Wrong password.").withStyle(ChatFormatting.RED));
             case SHOULD_KICK -> {
@@ -96,7 +97,7 @@ public final class AuthCommands {
                 return 0;
             }
             case OK -> {
-                source.sendSuccess(Component.literal("Logged in. Have fun!").withStyle(ChatFormatting.GREEN), false);
+                source.sendSuccess(() -> Component.literal("Logged in. Have fun!").withStyle(ChatFormatting.GREEN), false);
                 return 1;
             }
             default -> source.sendFailure(Component.literal("Login failed.").withStyle(ChatFormatting.RED));
@@ -126,7 +127,7 @@ public final class AuthCommands {
                     source.sendFailure(Component.literal("Changed, but saving failed. Tell an admin!").withStyle(ChatFormatting.RED));
                     return 0;
                 }
-                source.sendSuccess(Component.literal("Password changed.").withStyle(ChatFormatting.GREEN), false);
+                source.sendSuccess(() -> Component.literal("Password changed.").withStyle(ChatFormatting.GREEN), false);
                 return 1;
             }
             default -> source.sendFailure(Component.literal("Could not change password.").withStyle(ChatFormatting.RED));
@@ -142,7 +143,7 @@ public final class AuthCommands {
         if (!AuthEventHandler.save()) {
             SimpleAuth.LOGGER.error("Auth data failed to save after reset of {}", name);
         }
-        source.sendSuccess(Component.literal("Account '" + name + "' was reset; they must /register again.").withStyle(ChatFormatting.GREEN), true);
+        source.sendSuccess(() -> Component.literal("Account '" + name + "' was reset; they must /register again.").withStyle(ChatFormatting.GREEN), true);
         return 1;
     }
 }

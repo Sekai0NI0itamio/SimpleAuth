@@ -117,7 +117,8 @@ public final class AuthEventHandler {
 
     @SubscribeEvent
     public static void onChat(ServerChatEvent event) {
-        if (event.getPlayer() instanceof ServerPlayer player && locked(player)) {
+        ServerPlayer player = event.getPlayer();
+        if (locked(player)) {
             event.setCanceled(true);
             player.sendSystemMessage(prompt(manager.hasAccount(player.getUUID())), true);
         }
