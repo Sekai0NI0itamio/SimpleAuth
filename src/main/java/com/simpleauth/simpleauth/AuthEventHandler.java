@@ -41,7 +41,7 @@ public final class AuthEventHandler {
     private AuthEventHandler() {
     }
 
-    static boolean save() {
+    public static boolean save() {
         if (store == null) {
             return false;
         }
