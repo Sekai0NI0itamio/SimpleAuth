@@ -12,10 +12,10 @@
 ## v1.1.0 additions
 
 - [x] Same-IP rejoin within the session window (default 24h, configurable, 0 disables) auto-authenticates, no /login needed
-- [ ] Sessions persist across server restarts (stored with the account, expiry honored)
-- [ ] Wrong IP or expired session falls back to the normal /login flow
-- [ ] Unauthenticated players are moved to the limbo spot on join; inventory, ender chest, health, food, XP, and real location snapshotted to disk first
+- [x] Sessions persist across server restarts (stored with the account, expiry honored)
+- [x] Wrong IP or expired session falls back to the normal /login flow
+- [ ] Unauthenticated players are moved to the limbo spot on join; inventory, ender chest, health, food, XP, and real location snapshotted to disk first (pending live verification on Seedloaf)
 - [ ] Snapshots survive restarts and frozen-logouts (capture-once rule: an existing snapshot is never overwritten by limbo state)
 - [ ] Successful auth restores snapshot and deletes it; frozen logout restores best-effort without deleting
-- [ ] Limbo spot and session window are config values; unit tests cover session valid/expired/wrong-IP cases in CI
+- [x] Limbo spot and session window are config values; unit tests cover session valid/expired/wrong-IP cases in CI
 - [ ] Limbo restore verified live on the Seedloaf server by the user (cannot be CI-tested: needs live player I/O)
