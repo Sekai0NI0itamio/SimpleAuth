@@ -20,6 +20,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -41,7 +42,11 @@ public final class AuthEventHandler {
     private AuthEventHandler() {
     }
 
-    public static boolean save() {
+    public     static AuthManager manager() {
+        return manager;
+    }
+
+    static boolean save() {
         if (store == null) {
             return false;
         }
@@ -66,7 +71,7 @@ public final class AuthEventHandler {
     }
 
     @SubscribeEvent
-    public static void onServerStarted(ServerStartedEvent event) {
+    public static void onServerStarting(ServerStartingEvent event) {
         server = event.getServer();
         Path file = server.getWorldPath(LevelResource.ROOT).resolve("serverconfig").resolve("simpleauth.json");
         store = new PasswordStore(file);
@@ -90,9 +95,10 @@ public final class AuthEventHandler {
 
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
-        if (manager != null) {
-            AuthCommands.register(event.getDispatcher(), manager);
-        }
+        // No manager check here on purpose: this event fires during server
+        // bootstrap, before ServerStartingEvent. Commands resolve the manager
+        // when a player actually runs them, long after init.
+        AuthCommands.register(event.getDispatcher());
     }
 
     @SubscribeEvent
