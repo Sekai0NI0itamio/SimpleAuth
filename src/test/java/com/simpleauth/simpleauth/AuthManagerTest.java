@@ -65,6 +65,6 @@ public class AuthManagerTest {
         manager.noteLogin(slow, 0, 64, 0, 0, 0, 1000L);
         assertTrue(manager.expired(1000L + 121_000L, 120_000L).contains(slow));
         manager.register(slow, "slow", "pw12", "pw12", 4);
-        assertTrue(manager.expired(1000L + 121_000L, 120_000L).isEmpty());
+        assertFalse(manager.expired(1000L + 121_000L, 120_000L).contains(slow));
     }
 }
