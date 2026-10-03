@@ -2,7 +2,9 @@ package com.simpleauth.simpleauth;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -60,6 +62,8 @@ public final class LimboService {
                 tag.putFloat("Yaw", player.getYRot());
                 tag.putFloat("Pitch", player.getXRot());
                 writeTag(file(dir, player.getUUID()), tag);
+                SimpleAuth.LOGGER.info("SimpleAuth snapshotted {} items for {}",
+                        countItems(player), player.getGameProfile().getName());
             }
         } catch (IOException e) {
             SimpleAuth.LOGGER.error("Failed to write SimpleAuth limbo snapshot for {}", player.getGameProfile().getName(), e);
@@ -83,6 +87,11 @@ public final class LimboService {
                     tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"),
                     tag.getFloat("Yaw"), tag.getFloat("Pitch"));
             player.load(tag);
+            if (tag.contains("Inventory", Tag.TAG_LIST)) {
+                player.getInventory().load(tag.getList("Inventory", Tag.TAG_COMPOUND));
+            }
+            SimpleAuth.LOGGER.info("SimpleAuth restored snapshot ({} items now) for {}",
+                    countItems(player), player.getGameProfile().getName());
             if (!keepFile) {
                 Files.deleteIfExists(snapshot);
             }
@@ -91,6 +100,16 @@ public final class LimboService {
             SimpleAuth.LOGGER.error("Failed to read SimpleAuth limbo snapshot for {}", player.getGameProfile().getName(), e);
             return false;
         }
+    }
+
+    private static int countItems(ServerPlayer player) {
+        int count = 0;
+        for (net.minecraft.world.item.ItemStack stack : player.getInventory().items) {
+            if (!stack.isEmpty()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static void applyLimbo(ServerPlayer player) {

@@ -135,6 +135,9 @@ public final class AuthEventHandler {
             return;
         }
         LimboService.capture(player, snapshotDir(player.getServer()));
+        manager.noteLogin(player.getUUID(),
+                SimpleAuthConfig.LIMBO_X.get(), SimpleAuthConfig.LIMBO_Y.get(), SimpleAuthConfig.LIMBO_Z.get(),
+                0.0F, 0.0F, System.currentTimeMillis());
         player.sendSystemMessage(prompt(manager.hasAccount(player.getUUID())), false);
     }
 
