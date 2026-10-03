@@ -116,6 +116,24 @@ public final class AuthManager {
         return removed;
     }
 
+    public void saveSession(UUID id, String ip, long now, long windowMillis) {
+        if (windowMillis > 0 && store.has(id)) {
+            store.saveSession(id, ip, now + windowMillis);
+        }
+    }
+
+    public boolean trySession(UUID id, String ip, long now, long windowMillis) {
+        if (windowMillis <= 0 || !store.has(id)) {
+            return false;
+        }
+        if (store.sessionValid(id, ip, now)) {
+            authed.add(id);
+            attempts.remove(id);
+            return true;
+        }
+        return false;
+    }
+
     public List<UUID> expired(long now, long timeoutMillis) {
         List<UUID> out = new ArrayList<>();
         if (timeoutMillis <= 0) {

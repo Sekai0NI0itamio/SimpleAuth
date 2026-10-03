@@ -60,8 +60,27 @@ public class AuthManagerTest {
     }
 
     @Test
-    public void timeoutOnlyCatchesUnauthenticated() {
-        UUID slow = UUID.randomUUID();
+    public void sessionAutoLoginWithinWindow() {
+        manager.register(id, "itamio", "s3cret!", "s3cret!", 4);
+        manager.saveSession(id, "1.2.3.4", 10_000L, 24L * 3600_000L);
+        manager.forget(id);
+        assertTrue(manager.trySession(id, "1.2.3.4", 10_000L + 3600_000L, 24L * 3600_000L));
+        assertTrue(manager.isAuthed(id));
+    }
+
+    @Test
+    public void sessionRejectedWhenExpiredOrWrongIpOrDisabled() {
+        manager.register(id, "itamio", "s3cret!", "s3cret!", 4);
+        manager.saveSession(id, "1.2.3.4", 10_000L, 3600_000L);
+        manager.forget(id);
+        assertFalse(manager.trySession(id, "1.2.3.4", 10_000L + 3601_000L, 3600_000L));
+        assertFalse(manager.trySession(id, "5.6.7.8", 10_000L + 1000L, 3600_000L));
+        assertFalse(manager.trySession(id, "1.2.3.4", 10_000L + 1000L, 0L));
+        assertFalse(manager.isAuthed(id));
+    }
+
+    @Test
+    public void timeoutOnlyCatchesUnauthenticated() {        UUID slow = UUID.randomUUID();
         manager.noteLogin(slow, 0, 64, 0, 0, 0, 1000L);
         assertTrue(manager.expired(1000L + 121_000L, 120_000L).contains(slow));
         manager.register(slow, "slow", "pw12", "pw12", 4);

@@ -3,6 +3,7 @@ package com.simpleauth.simpleauth.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.simpleauth.simpleauth.AuthEventHandler;
+import com.simpleauth.simpleauth.LimboService;
 import com.simpleauth.simpleauth.SimpleAuth;
 import com.simpleauth.simpleauth.SimpleAuthConfig;
 import com.simpleauth.simpleauth.auth.AuthManager;
@@ -79,6 +80,9 @@ public final class AuthCommands {
             case MISMATCH -> source.sendFailure(Component.literal("Passwords do not match. Try again.").withStyle(ChatFormatting.RED));
             case TOO_SHORT -> source.sendFailure(Component.literal("Password too short.").withStyle(ChatFormatting.RED));
             case OK -> {
+                manager.saveSession(player.getUUID(), AuthEventHandler.ipOf(player),
+                        System.currentTimeMillis(), AuthEventHandler.sessionWindowMs());
+                LimboService.restore(player, AuthEventHandler.snapshotDir(player.getServer()), false);
                 if (!AuthEventHandler.save()) {
                     source.sendFailure(Component.literal("Registered, but saving failed. Tell an admin!").withStyle(ChatFormatting.RED));
                     return 0;
@@ -113,6 +117,12 @@ public final class AuthCommands {
                 return 0;
             }
             case OK -> {
+                manager.saveSession(player.getUUID(), AuthEventHandler.ipOf(player),
+                        System.currentTimeMillis(), AuthEventHandler.sessionWindowMs());
+                LimboService.restore(player, AuthEventHandler.snapshotDir(player.getServer()), false);
+                if (!AuthEventHandler.save()) {
+                    SimpleAuth.LOGGER.error("Auth session failed to save for {}", player.getGameProfile().getName());
+                }
                 source.sendSuccess(() -> Component.literal("Logged in. Have fun!").withStyle(ChatFormatting.GREEN), false);
                 return 1;
             }

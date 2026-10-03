@@ -25,6 +25,8 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -42,8 +44,25 @@ public final class AuthEventHandler {
     private AuthEventHandler() {
     }
 
-    public     static AuthManager manager() {
+    static AuthManager manager() {
         return manager;
+    }
+
+    public static String ipOf(ServerPlayer player) {
+        SocketAddress address = player.connection.getRemoteAddress();
+        if (address instanceof InetSocketAddress inet) {
+            return inet.getAddress().getHostAddress();
+        }
+        return address.toString();
+    }
+
+    public static Path snapshotDir(MinecraftServer server) {
+        return LimboService.dir(server);
+    }
+
+    public static long sessionWindowMs() {
+        int hours = SimpleAuthConfig.SESSION_HOURS.get();
+        return hours <= 0 ? 0L : (long) hours * 3600_000L;
     }
 
     public static boolean save() {
@@ -109,14 +128,22 @@ public final class AuthEventHandler {
         manager.noteLogin(player.getUUID(),
                 player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot(),
                 System.currentTimeMillis());
-        if (!manager.isAuthed(player.getUUID())) {
-            player.sendSystemMessage(prompt(manager.hasAccount(player.getUUID())), false);
+        long now = System.currentTimeMillis();
+        if (manager.trySession(player.getUUID(), ipOf(player), now, sessionWindowMs())) {
+            LimboService.restore(player, snapshotDir(player.getServer()), false);
+            player.sendSystemMessage(Component.literal("Welcome back, session restored.").withStyle(ChatFormatting.GREEN), false);
+            return;
         }
+        LimboService.capture(player, snapshotDir(player.getServer()));
+        player.sendSystemMessage(prompt(manager.hasAccount(player.getUUID())), false);
     }
 
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (manager != null && event.getEntity() instanceof ServerPlayer player) {
+            if (!manager.isAuthed(player.getUUID())) {
+                LimboService.restore(player, snapshotDir(player.getServer()), true);
+            }
             manager.forget(player.getUUID());
         }
     }

@@ -72,8 +72,7 @@ public final class PasswordStore {
         entries.put(id.toString(), new Entry(name, encode(salt), encode(hash(password, salt))));
     }
 
-    public synchronized boolean check(UUID id, String password) {
-        Entry entry = entries.get(id.toString());
+    public synchronized boolean check(UUID id, String password) {        Entry entry = entries.get(id.toString());
         if (entry == null || entry.salt == null || entry.hash == null) {
             return false;
         }
@@ -124,10 +123,28 @@ public final class PasswordStore {
         return Base64.getDecoder().decode(text);
     }
 
+    public synchronized boolean sessionValid(UUID id, String ip, long now) {
+        Entry entry = entries.get(id.toString());
+        return entry != null
+                && entry.sessionIp != null
+                && entry.sessionIp.equals(ip)
+                && entry.sessionExpires > now;
+    }
+
+    public synchronized void saveSession(UUID id, String ip, long expiresAt) {
+        Entry entry = entries.get(id.toString());
+        if (entry != null) {
+            entry.sessionIp = ip;
+            entry.sessionExpires = expiresAt;
+        }
+    }
+
     static final class Entry {
         String name;
         String salt;
         String hash;
+        String sessionIp;
+        long sessionExpires;
 
         Entry(String name, String salt, String hash) {
             this.name = name;

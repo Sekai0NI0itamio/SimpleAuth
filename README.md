@@ -13,10 +13,17 @@ No client mod needed. Passwords are stored salted and hashed (PBKDF2-HMAC-SHA256
 | `/password change <old> <new>` | logged in | Change your password |
 | `/auth reset <name>` | ops (level 2+) | Delete an account so the player must `/register` again |
 
-Until logged in, a player cannot move, chat, break or place blocks, interact,
-attack, pick up or drop items, open containers, or run any command except
-`/register` and `/login`. Too many wrong passwords kicks; idlers are kicked
-after the login timeout (both configurable, `0` disables).
+Until logged in, a player waits in a limbo spot with an empty inventory:
+no moving away, chatting, breaking/placing, interacting, attacking, item
+pickup/drop, containers, or any command except `/register` and `/login`.
+Their real inventory, ender chest, health, food, XP, and location are
+snapshotted to disk first and restored on login. Too many wrong passwords
+kicks; idlers are kicked after the login timeout (both configurable,
+`0` disables).
+
+Rejoining from the same IP within 24 hours (configurable, `0` disables)
+logs you back in automatically. Same-IP sessions are convenience, not a
+vault: players behind one NAT share an address, so keep the whitelist on.
 
 ## Install
 
@@ -29,6 +36,8 @@ after the login timeout (both configurable, `0` disables).
 - `loginTimeoutSeconds` (default 120): kick idle unauthenticated players; `0` disables.
 - `maxLoginAttempts` (default 5): wrong `/login` tries before kick; `0` disables.
 - `minPasswordLength` (default 4).
+- `sessionHours` (default 24): same-IP auto-login window; `0` disables.
+- `limboDimension` / `limboX` / `limboY` / `limboZ`: where unauthenticated players wait (default high above overworld spawn).
 
 ## Building
 
