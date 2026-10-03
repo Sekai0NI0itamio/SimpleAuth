@@ -1,28 +1,32 @@
 package com.simpleauth.simpleauth;
 
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Hides unauthenticated players in a configurable limbo spot with an emptied
- * inventory. Real state is snapshotted to disk first and restored on login.
- * Snapshots are never overwritten once taken, so a frozen logout or a restart
- * cannot destroy the real state.
+ * inventory. Real state is snapshotted to disk first (plain gzipped NBT, one
+ * file per player) and restored on login. Snapshots are never overwritten
+ * once taken, so a frozen logout or a restart cannot destroy real state.
  */
 public final class LimboService {
     private LimboService() {
@@ -48,7 +52,14 @@ public final class LimboService {
         try {
             Files.createDirectories(dir);
             if (!hasSnapshot(dir, player.getUUID())) {
-                NbtIo.writeCompressed(file(dir, player.getUUID()), snapshotOf(player));
+                CompoundTag tag = player.saveWithoutId(new CompoundTag());
+                tag.putString("Dim", player.serverLevel().dimension().location().toString());
+                tag.putDouble("X", player.getX());
+                tag.putDouble("Y", player.getY());
+                tag.putDouble("Z", player.getZ());
+                tag.putFloat("Yaw", player.getYRot());
+                tag.putFloat("Pitch", player.getXRot());
+                writeTag(file(dir, player.getUUID()), tag);
             }
         } catch (IOException e) {
             SimpleAuth.LOGGER.error("Failed to write SimpleAuth limbo snapshot for {}", player.getGameProfile().getName(), e);
@@ -66,7 +77,12 @@ public final class LimboService {
             return false;
         }
         try {
-            apply(player, NbtIo.readCompressed(snapshot));
+            CompoundTag tag = readTag(snapshot);
+            ServerLevel level = levelOf(player.getServer(), tag.getString("Dim"));
+            player.teleportTo(level,
+                    tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"),
+                    tag.getFloat("Yaw"), tag.getFloat("Pitch"));
+            player.load(tag);
             if (!keepFile) {
                 Files.deleteIfExists(snapshot);
             }
@@ -75,44 +91,6 @@ public final class LimboService {
             SimpleAuth.LOGGER.error("Failed to read SimpleAuth limbo snapshot for {}", player.getGameProfile().getName(), e);
             return false;
         }
-    }
-
-    private static CompoundTag snapshotOf(ServerPlayer player) {
-        CompoundTag tag = new CompoundTag();
-        tag.putString("Dim", player.serverLevel().dimension().location().toString());
-        tag.putDouble("X", player.getX());
-        tag.putDouble("Y", player.getY());
-        tag.putDouble("Z", player.getZ());
-        tag.putFloat("Yaw", player.getYRot());
-        tag.putFloat("Pitch", player.getXRot());
-        tag.put("Inventory", player.getInventory().save(new ListTag()));
-        tag.put("EnderItems", player.getEnderChestInventory().save(new ListTag()));
-        tag.putFloat("Health", player.getHealth());
-        tag.putInt("Food", player.getFoodData().getFoodLevel());
-        tag.putFloat("Sat", player.getFoodData().getSaturationLevel());
-        tag.putFloat("XpP", player.experienceProgress);
-        tag.putInt("XpLevel", player.experienceLevel);
-        tag.putInt("XpTotal", player.totalExperience);
-        return tag;
-    }
-
-    private static void apply(ServerPlayer player, CompoundTag tag) {
-        ServerLevel level = levelOf(player.getServer(), tag.getString("Dim"));
-        player.teleportTo(level,
-                tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"),
-                tag.getFloat("Yaw"), tag.getFloat("Pitch"));
-        if (tag.contains("Inventory", Tag.TAG_LIST)) {
-            player.getInventory().load(tag.getList("Inventory", Tag.TAG_COMPOUND));
-        }
-        if (tag.contains("EnderItems", Tag.TAG_LIST)) {
-            player.getEnderChestInventory().load(tag.getList("EnderItems", Tag.TAG_COMPOUND));
-        }
-        player.setHealth(tag.getFloat("Health"));
-        player.getFoodData().setFoodLevel(tag.getInt("Food"));
-        player.getFoodData().setSaturation(tag.getFloat("Sat"));
-        player.experienceProgress = tag.getFloat("XpP");
-        player.experienceLevel = tag.getInt("XpLevel");
-        player.totalExperience = tag.getInt("XpTotal");
     }
 
     private static void applyLimbo(ServerPlayer player) {
@@ -134,5 +112,19 @@ public final class LimboService {
             SimpleAuth.LOGGER.error("Unknown limbo dimension '{}', using overworld", dim);
         }
         return server.overworld();
+    }
+
+    private static void writeTag(Path file, CompoundTag tag) throws IOException {
+        try (DataOutputStream out = new DataOutputStream(
+                new BufferedOutputStream(new GZIPOutputStream(Files.newOutputStream(file))))) {
+            NbtIo.write(tag, out);
+        }
+    }
+
+    private static CompoundTag readTag(Path file) throws IOException {
+        try (DataInputStream in = new DataInputStream(
+                new BufferedInputStream(new GZIPInputStream(Files.newInputStream(file))))) {
+            return NbtIo.read(in);
+        }
     }
 }

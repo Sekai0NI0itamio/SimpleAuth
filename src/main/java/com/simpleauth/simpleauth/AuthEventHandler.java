@@ -44,7 +44,7 @@ public final class AuthEventHandler {
     private AuthEventHandler() {
     }
 
-    static AuthManager manager() {
+    public static AuthManager manager() {
         return manager;
     }
 
